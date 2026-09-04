@@ -4,12 +4,23 @@ function generarCodigo(){
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
 }
 
+function obtenerStore(){
+  // Auto-detección de contexto puede fallar en algunos sitios; forzamos config manual como respaldo.
+  const siteID = process.env.SITE_ID || process.env.NETLIFY_SITE_ID;
+  const token = process.env.NETLIFY_TOKEN;
+  if (siteID && token) {
+    return getStore({ name: 'carnesmg-sync', siteID, token });
+  }
+  return getStore('carnesmg-sync');
+}
+
 exports.handler = async (event) => {
   const headers = { 'Content-Type': 'application/json' };
-  const store = getStore('carnesmg-sync');
   const code = event.queryStringParameters && event.queryStringParameters.code;
 
   try {
+    const store = obtenerStore();
+
     if (event.httpMethod === 'GET') {
       if (!code) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'falta el código' }) };
@@ -35,6 +46,6 @@ exports.handler = async (event) => {
 
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'método no permitido' }) };
   } catch (err) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message, stack: err.stack }) };
   }
 };
